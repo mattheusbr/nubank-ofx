@@ -1,37 +1,36 @@
 const startOfx = () => {
-  return `
-  OFXHEADER:100
-  DATA:OFXSGML
-  VERSION:102
-  SECURITY:NONE
-  ENCODING:USASCII
-  CHARSET:1252
-  COMPRESSION:NONE
-  OLDFILEUID:NONE
-  NEWFILEUID:NONE
-
-  <OFX>
-  <BANKMSGSRSV1>
-  <STMTTRNRS>
-  <STMTRS>
-  <BANKTRANLIST>`;
+  return `OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+<OFX>
+<BANKMSGSRSV1>
+<STMTTRNRS>
+<STMTRS>
+<BANKTRANLIST>`;
 }
 
 const endOfx = () => {
   return `</BANKTRANLIST>
-          </STMTRS>
-          </STMTTRNRS>
-          </BANKMSGSRSV1>
-          </OFX>`;
+</STMTRS>
+</STMTTRNRS>
+</BANKMSGSRSV1>
+</OFX>`;
 }
+
 
 const bankStatement = (date, amount, description) => {
   return `<STMTTRN>
-          <TRNTYPE>OTHER</TRNTYPE>
-          <DTPOSTED>${date}</DTPOSTED>
-          <TRNAMT>${amount}</TRNAMT>
-          <MEMO>${description}</MEMO>
-          </STMTTRN>`;
+<TRNTYPE>OTHER</TRNTYPE>
+<DTPOSTED>${date}</DTPOSTED>
+<TRNAMT>${amount}</TRNAMT>
+<MEMO>${description}</MEMO>
+</STMTTRN>`;
 }
 
 const normalizeAmount = (text) => text.replace('.', '').replace(',','.');
