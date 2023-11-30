@@ -1,135 +1,133 @@
-(function() {
+const startOfx = () => {
+  return `
+  OFXHEADER:100
+  DATA:OFXSGML
+  VERSION:102
+  SECURITY:NONE
+  ENCODING:USASCII
+  CHARSET:1252
+  COMPRESSION:NONE
+  OLDFILEUID:NONE
+  NEWFILEUID:NONE
 
-  const startOfx = () => {
-    return `
-OFXHEADER:100
-DATA:OFXSGML
-VERSION:102
-SECURITY:NONE
-ENCODING:USASCII
-CHARSET:1252
-COMPRESSION:NONE
-OLDFILEUID:NONE
-NEWFILEUID:NONE
+  <OFX>
+  <BANKMSGSRSV1>
+  <STMTTRNRS>
+  <STMTRS>
+  <BANKTRANLIST>`;
+}
 
-<OFX>
-<BANKMSGSRSV1>
-<STMTTRNRS>
-<STMTRS>
-<BANKTRANLIST>`;
+const endOfx = () => {
+  return `</BANKTRANLIST>
+          </STMTRS>
+          </STMTTRNRS>
+          </BANKMSGSRSV1>
+          </OFX>`;
+}
+
+const bankStatement = (date, amount, description) => {
+  return `<STMTTRN>
+          <TRNTYPE>OTHER</TRNTYPE>
+          <DTPOSTED>${date}</DTPOSTED>
+          <TRNAMT>${amount}</TRNAMT>
+          <MEMO>${description}</MEMO>
+          </STMTTRN>`;
+}
+
+const normalizeAmount = (text) => text.replace('.', '').replace(',','.');
+
+const normalizeDay = (date) => date.split(' ')[0];
+
+const normalizeMonth = (date) => {
+  const month = date.split(' ')[1]
+  const months = {
+    'Jan': '01',
+    'Fev': '02',
+    'Mar': '03',
+    'Abr': '04',
+    'Mai': '05',
+    'Jun': '06',
+    'Jul': '07',
+    'Ago': '08',
+    'Set': '09',
+    'Out': '10',
+    'Nov': '11',
+    'Dez': '12'
   }
 
-  const endOfx = () =>
-    `
-</BANKTRANLIST>
-</STMTRS>
-</STMTTRNRS>
-</BANKMSGSRSV1>
-</OFX>`;
+  return months[month];
+}
 
-  const bankStatement = (date, amount, description) =>
-    `
-<STMTTRN>
-<TRNTYPE>OTHER</TRNTYPE>
-<DTPOSTED>${date}</DTPOSTED>
-<TRNAMT>${amount}</TRNAMT>
-<MEMO>${description}</MEMO>
-</STMTTRN>`;
+const normalizeYear = (date) => {
+  const dateArray = date.split(' ');
+  if (dateArray.length > 2) {
+    return '20'+dateArray[2];
+  } else {
+    return new Date().getFullYear();
+  };
+}
 
-  const normalizeAmount = (text) =>
-    text.replace('.', '').replace(',','.');
+const normalizeDate = (date) => normalizeYear(date)+normalizeMonth(date)+normalizeDay(date);
 
-  const normalizeDay = (date) =>
-    date.split(' ')[0];
+function generateOfx(idTabPanelCurrent) {
+  let ofx = startOfx();
+  let tabPanel = document.getElementById(idTabPanelCurrent);
 
-  const normalizeMonth = (date) => {
-    const month = date.split(' ')[1]
-    const months = {
-      'Jan': '01',
-      'Fev': '02',
-      'Mar': '03',
-      'Abr': '04',
-      'Mai': '05',
-      'Jun': '06',
-      'Jul': '07',
-      'Ago': '08',
-      'Set': '09',
-      'Out': '10',
-      'Nov': '11',
-      'Dez': '12'
-    }
+  tabPanel.querySelectorAll('.charge:not([style=\'display:none\'])').forEach(function(charge){
+    const date = normalizeDate(charge.querySelector('.time').textContent);
+    const description = charge.querySelector('.description').textContent.trim();
+    const amount = normalizeAmount(charge.querySelector('.amount').textContent);
 
-    return months[month];
-  }
+    ofx += bankStatement(date, amount, description);
+  });
 
-  const normalizeYear = (date) => {
-    const dateArray = date.split(' ');
-    if (dateArray.length > 2) {
-      return '20'+dateArray[2];
-    } else {
-      return new Date().getFullYear();
-    };
-  }
+  ofx += endOfx();
+  exportOfx(ofx);
+}
 
-  const normalizeDate = (date) =>
-    normalizeYear(date)+normalizeMonth(date)+normalizeDay(date);
+function exportOfx(ofx) {
+  const openMonth = " " + document.querySelector('md-tab.ng-scope.active .period').textContent.trim();
+  const period = normalizeYear(openMonth) + "-" + normalizeMonth(openMonth);
+  link = document.createElement("a");
+  link.setAttribute("href", 'data:application/x-ofx,'+encodeURIComponent(ofx));
+  link.setAttribute("download", "nubank-" + period + ".ofx");
+  link.click();
+}
 
-  const exportOfx = (ofx) => {
-    const openMonth = " " + document.querySelector('md-tab.ng-scope.active .period').textContent.trim();
-    const period = normalizeYear(openMonth) + "-" + normalizeMonth(openMonth);
-    link = document.createElement("a");
-    link.setAttribute("href", 'data:application/x-ofx,'+encodeURIComponent(ofx));
-    link.setAttribute("download", "nubank-" + period + ".ofx");
-    link.click();
-  }
+function createExportButton(idTabPanelCurrent) {
+  const button = document.createElement('button');
 
-  const generateOfx = () => {
-    let ofx = startOfx();
+  button.classList.add('nu-button');
+  button.classList.add('secondary');
+  button.setAttribute('role', 'gen-ofx');
+  button.textContent = "Exportar para OFX";
 
-    document.querySelectorAll('.charge:not([style=\'display:none\'])').forEach(function(charge){
-      const date = normalizeDate(charge.querySelector('.time').textContent);
-      const description = charge.querySelector('.description').textContent.trim();
-      const amount = normalizeAmount(charge.querySelector('.amount').textContent);
+  button.addEventListener('click', () => {  generateOfx(idTabPanelCurrent)  });
 
-      ofx += bankStatement(date, amount, description);
-    });
+  return button;
+}
 
-    ofx += endOfx();
-    exportOfx(ofx);
-  }
+function exportOfxButtonAlreadyExists() {
+  return document.querySelectorAll(".summary.open [role=\"gen-ofx\"]").length > 0
+}
 
-  const createExportButton = () => {
-    const button = document.createElement('button');
-
-    button.classList.add('nu-button');
-    button.classList.add('secondary');
-    button.setAttribute('role', 'gen-ofx');
-    button.textContent = "Exportar para OFX";
-
-    button.addEventListener('click', generateOfx)
-
-    return button;
-  }
-
-  const exportOfxButtonAlreadyExists = () =>
-    document.querySelectorAll(".summary.open [role=\"gen-ofx\"]").length > 0
-
-  const insertExportButtonCallback = (mutationList, observer) => {
+function insertExportButtonCallback(mutationList, observer){
     if(mutationList == undefined || exportOfxButtonAlreadyExists()) return;
 
     const generateBoletoButton = document.querySelector('.summary.open .nu-button');
     if (generateBoletoButton == undefined) return;
 
-    const exportOfxButton =  createExportButton();
+    const idTabPanelCurrent = generateBoletoButton.parentNode.parentNode.parentNode.id;    
+    const exportOfxButton =  createExportButton(idTabPanelCurrent);
     generateBoletoButton.parentNode.appendChild(exportOfxButton);
 
     observer.disconnect();
-  }
+}
 
+(function() {
   const targetElement = document.querySelector('.bills-browser');
-  const config = { attributes: true, childList: true, subtree: true }
+  const config = { attributes: true, childList: true, subtree: true };
 
   const observer = new MutationObserver(insertExportButtonCallback);
-  observer.observe(targetElement, config)
+  observer.observe(targetElement, config);
 })();
-
